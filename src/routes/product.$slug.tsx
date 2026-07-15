@@ -1,12 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowUpRight, Check, Heart, Minus, Plus, RotateCw, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUpRight, Heart, Minus, Plus, RotateCw, ShieldCheck, Sparkles, Truck } from "lucide-react";
 
 import hoodieFlat from "@/assets/product-hoodie-flat.jpg";
-import modelAlex from "@/assets/model-alex.jpg";
-import modelMaya from "@/assets/model-maya.jpg";
-import modelKenji from "@/assets/model-kenji.jpg";
-import modelLena from "@/assets/model-lena.jpg";
+import mMaleSlimLight from "@/assets/model-male-slim-light.jpg";
+import mMaleSlimMedium from "@/assets/model-male-slim-medium.jpg";
+import mMaleSlimDeep from "@/assets/model-male-slim-deep.jpg";
+import mMaleAthLight from "@/assets/model-male-athletic-light.jpg";
+import mMaleAthMedium from "@/assets/model-male-athletic-medium.jpg";
+import mMaleAthDeep from "@/assets/model-male-athletic-deep.jpg";
+import mFemSlimLight from "@/assets/model-female-slim-light.jpg";
+import mFemSlimMedium from "@/assets/model-female-slim-medium.jpg";
+import mFemSlimDeep from "@/assets/model-female-slim-deep.jpg";
+import mFemCurvyLight from "@/assets/model-female-curvy-light.jpg";
+import mFemCurvyMedium from "@/assets/model-female-curvy-medium.jpg";
+import mFemCurvyDeep from "@/assets/model-female-curvy-deep.jpg";
 
 export const Route = createFileRoute("/product/$slug")({
   head: () => ({
@@ -15,13 +23,13 @@ export const Route = createFileRoute("/product/$slug")({
       {
         name: "description",
         content:
-          "The OG Archive Oversized Hoodie in matte black. 500gsm heavyweight cotton. Preview the fit on multiple models with the AI Model Switcher.",
+          "The OG Archive Oversized Hoodie in matte black. 500gsm heavyweight cotton. Preview the fit on your own body type with the AI Fit Preview.",
       },
       { property: "og:title", content: "OG Archive Oversized Hoodie — OG CLOTHING" },
       {
         property: "og:description",
         content:
-          "Heavyweight 500gsm cotton hoodie. AI-powered fit preview across body types.",
+          "Heavyweight 500gsm cotton hoodie. AI-powered fit preview across body types and skin tones.",
       },
       { property: "og:type", content: "product" },
     ],
@@ -29,20 +37,40 @@ export const Route = createFileRoute("/product/$slug")({
   component: ProductPage,
 });
 
-type Model = {
-  id: string;
-  name: string;
-  detail: string;
-  height: string;
-  wearing: string;
-  img: string;
+type Gender = "male" | "female";
+type Body = "slim" | "athletic" | "curvy";
+type Skin = "light" | "medium" | "deep";
+
+const IMAGES: Record<string, string> = {
+  "male-slim-light": mMaleSlimLight,
+  "male-slim-medium": mMaleSlimMedium,
+  "male-slim-deep": mMaleSlimDeep,
+  "male-athletic-light": mMaleAthLight,
+  "male-athletic-medium": mMaleAthMedium,
+  "male-athletic-deep": mMaleAthDeep,
+  "female-slim-light": mFemSlimLight,
+  "female-slim-medium": mFemSlimMedium,
+  "female-slim-deep": mFemSlimDeep,
+  "female-curvy-light": mFemCurvyLight,
+  "female-curvy-medium": mFemCurvyMedium,
+  "female-curvy-deep": mFemCurvyDeep,
 };
 
-const models: Model[] = [
-  { id: "alex", name: "Alex", detail: "6'1\" · Athletic", height: "185cm", wearing: "Size L", img: modelAlex },
-  { id: "maya", name: "Maya", detail: "5'6\" · Curvy", height: "168cm", wearing: "Size M", img: modelMaya },
-  { id: "kenji", name: "Kenji", detail: "5'10\" · Slim", height: "178cm", wearing: "Size M", img: modelKenji },
-  { id: "lena", name: "Lena", detail: "5'8\" · Petite", height: "173cm", wearing: "Size S", img: modelLena },
+const BODY_OPTIONS: Record<Gender, { id: Body; label: string }[]> = {
+  male: [
+    { id: "slim", label: "Slim" },
+    { id: "athletic", label: "Athletic" },
+  ],
+  female: [
+    { id: "slim", label: "Slim" },
+    { id: "curvy", label: "Curvy" },
+  ],
+};
+
+const SKIN_TONES: { id: Skin; label: string; hex: string }[] = [
+  { id: "light", label: "Light", hex: "#f0d5b8" },
+  { id: "medium", label: "Medium", hex: "#b47a52" },
+  { id: "deep", label: "Deep", hex: "#4a2a1a" },
 ];
 
 const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
@@ -53,26 +81,39 @@ const colors = [
   { id: "moss", label: "Moss", hex: "#2f3a24" },
 ];
 
+function fitRecommendation(gender: Gender, body: Body): string {
+  if (body === "athletic") return "L — true to size for a boxy drop shoulder";
+  if (body === "curvy") return "L — size up for a roomy oversized fit";
+  return gender === "female" ? "S — relaxed oversized fit" : "M — clean oversized fit";
+}
+
 function ProductPage() {
-  const [modelId, setModelId] = useState<string>("alex");
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  // Defaults: masculine · athletic · medium skin tone
+  const [gender, setGender] = useState<Gender>("male");
+  const [body, setBody] = useState<Body>("athletic");
+  const [skin, setSkin] = useState<Skin>("medium");
+
   const [size, setSize] = useState("L");
   const [color, setColor] = useState("matte");
   const [qty, setQty] = useState(1);
+  const [switching, setSwitching] = useState(false);
 
-  const current = models.find((m) => m.id === modelId) ?? models[0];
-
-  // Simulate an "AI render" transition when switching models (no page refresh)
+  // Keep body valid when gender flips (e.g. athletic → curvy, or curvy → athletic)
   useEffect(() => {
-    if (!pendingId || pendingId === modelId) return;
-    const t = setTimeout(() => {
-      setModelId(pendingId);
-      setPendingId(null);
-    }, 550);
-    return () => clearTimeout(t);
-  }, [pendingId, modelId]);
+    const valid = BODY_OPTIONS[gender].map((b) => b.id);
+    if (!valid.includes(body)) setBody(valid[valid.length - 1]);
+  }, [gender, body]);
 
-  const switching = pendingId !== null && pendingId !== modelId;
+  const currentKey = useMemo(() => `${gender}-${body}-${skin}`, [gender, body, skin]);
+
+  // Trigger a brief "AI render" flash whenever the selection changes
+  useEffect(() => {
+    setSwitching(true);
+    const t = setTimeout(() => setSwitching(false), 450);
+    return () => clearTimeout(t);
+  }, [currentKey]);
+
+  const fit = fitRecommendation(gender, body);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -81,21 +122,21 @@ function ProductPage() {
       <Breadcrumbs />
 
       <section className="mx-auto grid max-w-[1600px] grid-cols-1 gap-10 px-6 pb-16 md:grid-cols-12 md:gap-14">
-        {/* ─── LEFT · IMAGERY + MODEL SWITCHER ─── */}
+        {/* ─── LEFT · IMAGERY + FIT PREVIEW ─── */}
         <div className="md:col-span-7">
           <div className="relative">
             {/* Main visual */}
             <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-[color:var(--color-bone)]">
-              {models.map((m) => (
+              {Object.entries(IMAGES).map(([key, src]) => (
                 <img
-                  key={m.id}
-                  src={m.img}
-                  alt={`OG Archive Oversized Hoodie on ${m.name}, ${m.detail}`}
+                  key={key}
+                  src={src}
+                  alt={`OG Archive Oversized Hoodie previewed on a ${key.replaceAll("-", " ")} body`}
                   width={1024}
                   height={1280}
-                  loading={m.id === "alex" ? "eager" : "lazy"}
+                  loading={key === "male-athletic-medium" ? "eager" : "lazy"}
                   className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ease-out ${
-                    m.id === current.id
+                    key === currentKey
                       ? switching
                         ? "scale-[1.02] opacity-0 blur-sm"
                         : "scale-100 opacity-100 blur-0"
@@ -107,27 +148,7 @@ function ProductPage() {
               {/* AI badge */}
               <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-background/90 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest backdrop-blur">
                 <Sparkles className="h-3 w-3 text-[color:var(--color-electric)]" />
-                AI Model Switcher
-              </div>
-
-              {/* Current model card */}
-              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-                <div className="rounded-lg bg-background/90 px-4 py-3 backdrop-blur">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    Previewed on
-                  </div>
-                  <div className="mt-0.5 font-display text-lg uppercase tracking-tight">
-                    {current.name} — {current.wearing}
-                  </div>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    {current.detail} · {current.height}
-                  </div>
-                </div>
-                {switching && (
-                  <div className="rounded-full bg-foreground px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-background">
-                    Rendering fit…
-                  </div>
-                )}
+                AI Fit Preview
               </div>
 
               {/* Rendering overlay */}
@@ -137,63 +158,78 @@ function ProductPage() {
                 }`}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-[color:var(--color-electric)]/10 via-transparent to-[color:var(--color-neon)]/10" />
-                <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 animate-spin rounded-full border-2 border-transparent border-t-[color:var(--color-electric)]" />
+                <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 animate-spin rounded-full border-2 border-transparent border-t-[color:var(--color-electric)]" />
               </div>
+
+              {switching && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-background">
+                  Rendering your fit…
+                </div>
+              )}
             </div>
 
-            {/* Model switcher rail */}
-            <div className="mt-5">
-              <div className="mb-3 flex items-center justify-between">
+            {/* ─── PREVIEW ON YOU ─── */}
+            <div className="mt-6 rounded-xl border border-border p-5">
+              <div className="mb-4 flex items-center justify-between">
                 <div className="eyebrow flex items-center gap-2">
-                  <Sparkles className="h-3 w-3" /> See it on your body type
+                  <Sparkles className="h-3 w-3" /> See it on you
                 </div>
                 <button className="link-underline font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Use my measurements
+                  Save my profile
                 </button>
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {models.map((m) => {
-                  const active = m.id === current.id;
-                  const isPending = pendingId === m.id && switching;
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => setPendingId(m.id)}
-                      aria-pressed={active}
-                      className={`group relative overflow-hidden rounded-md border transition ${
-                        active
-                          ? "border-foreground ring-2 ring-foreground/10"
-                          : "border-border hover:border-foreground/60"
-                      }`}
-                    >
-                      <div className="aspect-[3/4] overflow-hidden bg-[color:var(--color-bone)]">
-                        <img
-                          src={m.img}
-                          alt={m.name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+
+              {/* Gender */}
+              <FieldRow label="Body">
+                <Segmented
+                  value={gender}
+                  onChange={(v) => setGender(v as Gender)}
+                  options={[
+                    { id: "male", label: "Masculine" },
+                    { id: "female", label: "Feminine" },
+                  ]}
+                />
+              </FieldRow>
+
+              {/* Body type */}
+              <FieldRow label="Build">
+                <Segmented
+                  value={body}
+                  onChange={(v) => setBody(v as Body)}
+                  options={BODY_OPTIONS[gender]}
+                />
+              </FieldRow>
+
+              {/* Skin tone */}
+              <FieldRow label="Skin tone">
+                <div className="flex gap-2">
+                  {SKIN_TONES.map((t) => {
+                    const active = t.id === skin;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSkin(t.id)}
+                        aria-label={t.label}
+                        aria-pressed={active}
+                        className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs transition ${
+                          active
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border hover:border-foreground/60"
+                        }`}
+                      >
+                        <span
+                          className="h-5 w-5 rounded-full border border-black/10"
+                          style={{ background: t.hex }}
                         />
-                      </div>
-                      <div className="flex items-center justify-between px-2 py-1.5 text-left">
-                        <span className="text-xs font-semibold">{m.name}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                          {m.wearing}
-                        </span>
-                      </div>
-                      {active && (
-                        <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-foreground text-background">
-                          <Check className="h-3 w-3" />
-                        </span>
-                      )}
-                      {isPending && (
-                        <span className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Same garment · Different body · Instant render · No refresh
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </FieldRow>
+
+              <p className="mt-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Same garment · Rendered on your body · Instant · No refresh
               </p>
             </div>
 
@@ -285,7 +321,7 @@ function ProductPage() {
                 })}
               </div>
               <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-[color:var(--color-electric)]">
-                AI fit tip: {current.name} at {current.height} recommends {current.wearing} for oversized fit.
+                AI fit tip: recommend {fit}.
               </p>
             </div>
 
@@ -331,6 +367,51 @@ function ProductPage() {
           </div>
         </aside>
       </section>
+    </div>
+  );
+}
+
+/* ─────── Small helpers ─────── */
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        {label}
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function Segmented({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { id: string; label: string }[];
+}) {
+  return (
+    <div className="inline-flex rounded-full border border-border p-0.5">
+      {options.map((o) => {
+        const active = o.id === value;
+        return (
+          <button
+            key={o.id}
+            onClick={() => onChange(o.id)}
+            aria-pressed={active}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              active
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
