@@ -193,7 +193,12 @@ function BrutalistEssentials() {
 
       <div className="grid grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-3">
         {trending.slice(0, 3).map((p, i) => (
-          <article key={p.name} className="group cursor-pointer">
+          <Link
+            key={p.name}
+            to="/product/$slug"
+            params={{ slug: "og-archive-oversized-hoodie" }}
+            className="group cursor-pointer"
+          >
             <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-[color:var(--color-bone)]">
               <img
                 src={p.img}
@@ -217,7 +222,7 @@ function BrutalistEssentials() {
               </div>
               <div className="text-sm font-mono">{p.price}</div>
             </div>
-          </article>
+          </Link>
         ))}
       </div>
     </section>
