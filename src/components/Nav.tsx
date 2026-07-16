@@ -32,7 +32,7 @@ export function Nav() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
@@ -96,7 +96,7 @@ export function Nav() {
 
       {/* Mobile Menu Overlay */}
       <div
-        className={`fixed inset-0 top-[69px] z-30 bg-background/95 backdrop-blur-md transition-all duration-300 md:hidden ${
+        className={`fixed inset-0 top-[69px] z-50 bg-background/95 backdrop-blur-md transition-all duration-300 md:hidden ${
           mobileOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full pointer-events-none"
         }`}
       >

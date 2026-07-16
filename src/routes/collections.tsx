@@ -83,7 +83,7 @@ function CollectionsPage() {
           to="/shop"
           className="group relative block overflow-hidden rounded-xl bg-foreground"
         >
-          <div className="aspect-[21/9] overflow-hidden">
+          <div className="aspect-square md:aspect-[21/9] overflow-hidden">
             <img
               src={COLLECTIONS[0].img}
               alt={COLLECTIONS[0].name}
