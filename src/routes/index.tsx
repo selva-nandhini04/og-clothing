@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { subscribeNewsletter } from "@/lib/queries";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 
 import heroMain from "@/assets/hero-main.jpg";
 import productHoodie from "@/assets/product-hoodie.jpg";
@@ -407,14 +408,18 @@ function BrandStrip() {
       </div>
 
       {/* Marquee Section */}
-      <div className="overflow-hidden border-t border-border pt-12 pb-6">
-        <div className="flex animate-marquee gap-16 whitespace-nowrap font-display text-2xl uppercase tracking-widest text-muted-foreground/60">
-          {row.map((b, i) => (
-            <span key={i} className="hover:text-foreground transition-colors duration-300">
-              {b}
-            </span>
-          ))}
-        </div>
+      <div className="border-t border-border pt-12 pb-6 cursor-grab active:cursor-grabbing">
+        <Carousel opts={{ dragFree: true, loop: true }}>
+          <CarouselContent className="-ml-16">
+            {row.map((b, i) => (
+              <CarouselItem key={i} className="pl-16 basis-auto">
+                <span className="font-display text-2xl uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors duration-300 whitespace-nowrap">
+                  {b}
+                </span>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
       </div>
     </section>
   );

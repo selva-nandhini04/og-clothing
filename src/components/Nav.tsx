@@ -92,57 +92,58 @@ export function Nav() {
           </div>
         </div>
 
-        {/* Mobile Menu Overlay */}
-        <div
-          className={`fixed inset-0 top-[69px] z-30 bg-background/95 backdrop-blur-md transition-all duration-300 md:hidden ${
-            mobileOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full pointer-events-none"
-          }`}
-        >
-          <nav className="h-full overflow-y-auto px-6 py-8">
-            <ul className="space-y-6">
-              {NAV_LINKS.map((l, i) => (
-                <li key={l.label} style={{ transitionDelay: `${i * 50}ms` }} className={`transition-all duration-500 transform ${mobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
-                  <Link
-                    to={l.to}
-                    onClick={() => setMobileOpen(false)}
-                    className={
-                      l.label === "FIFA'26"
-                        ? "flex items-center gap-3 font-display text-4xl uppercase tracking-tight transition bg-gradient-to-r from-[#009C3B] via-[#F6B40E] to-[#E3001B] bg-clip-text text-transparent hover:opacity-80"
-                        : "block font-display text-4xl uppercase tracking-tight transition hover:text-[color:var(--color-electric)]"
-                    }
-                  >
-                    {l.label === "FIFA'26" && (
-                      <img src="/fifa26-emblem.webp" alt="FIFA" className="h-8 w-auto inline-block drop-shadow-sm" />
-                    )}
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-              
-              <div className="h-px w-full bg-border my-8" />
-              
-              <li className={`transition-all duration-500 delay-300 transform ${mobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
-                <Link
-                  to="/auth"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 font-mono text-sm uppercase tracking-widest text-muted-foreground transition hover:text-foreground"
-                >
-                  <User className="h-4 w-4" /> Account
-                </Link>
-              </li>
-              <li className={`mt-6 transition-all duration-500 delay-400 transform ${mobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
-                <Link
-                  to="/cart"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 font-mono text-sm uppercase tracking-widest text-muted-foreground transition hover:text-foreground"
-                >
-                  <ShoppingBag className="h-4 w-4" /> Cart {totalItems > 0 && <span className="text-[color:var(--color-electric)]">({totalItems})</span>}
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      <div
+        className={`fixed inset-0 top-[69px] z-30 bg-background/95 backdrop-blur-md transition-all duration-300 md:hidden ${
+          mobileOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full pointer-events-none"
+        }`}
+      >
+        <nav className="h-full overflow-y-auto px-6 py-8">
+          <ul className="space-y-6">
+            {NAV_LINKS.map((l, i) => (
+              <li key={l.label} style={{ transitionDelay: `${i * 50}ms` }} className={`transition-all duration-500 transform ${mobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
+                <Link
+                  to={l.to}
+                  onClick={() => setMobileOpen(false)}
+                  className={
+                    l.label === "FIFA'26"
+                      ? "flex items-center gap-3 font-display text-4xl uppercase tracking-tight transition bg-gradient-to-r from-[#009C3B] via-[#F6B40E] to-[#E3001B] bg-clip-text text-transparent hover:opacity-80"
+                      : "block font-display text-4xl uppercase tracking-tight transition hover:text-[color:var(--color-electric)]"
+                  }
+                >
+                  {l.label === "FIFA'26" && (
+                    <img src="/fifa26-emblem.webp" alt="FIFA" className="h-8 w-auto inline-block drop-shadow-sm" />
+                  )}
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            
+            <div className="h-px w-full bg-border my-8" />
+            
+            <li className={`transition-all duration-500 delay-300 transform ${mobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
+              <Link
+                to="/auth"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 font-mono text-sm uppercase tracking-widest text-muted-foreground transition hover:text-foreground"
+              >
+                <User className="h-4 w-4" /> Account
+              </Link>
+            </li>
+            <li className={`mt-6 transition-all duration-500 delay-400 transform ${mobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
+              <Link
+                to="/cart"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 font-mono text-sm uppercase tracking-widest text-muted-foreground transition hover:text-foreground"
+              >
+                <ShoppingBag className="h-4 w-4" /> Cart {totalItems > 0 && <span className="text-[color:var(--color-electric)]">({totalItems})</span>}
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
     </>
   );
 }
