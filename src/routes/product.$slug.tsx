@@ -1,6 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Heart, Minus, Plus, RotateCw, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Heart, Minus, Plus, RotateCw, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { useCart } from "@/contexts/cart";
+import { incrementProductViews } from "@/lib/queries";
 
 import hoodieFlat from "@/assets/product-hoodie-flat.jpg";
 import mMaleSlimLight from "@/assets/model-male-slim-light.jpg";
@@ -15,6 +17,7 @@ import mFemSlimDeep from "@/assets/model-female-slim-deep.jpg";
 import mFemCurvyLight from "@/assets/model-female-curvy-light.jpg";
 import mFemCurvyMedium from "@/assets/model-female-curvy-medium.jpg";
 import mFemCurvyDeep from "@/assets/model-female-curvy-deep.jpg";
+import productHoodie from "@/assets/product-hoodie.jpg";
 
 export const Route = createFileRoute("/product/$slug")({
   head: () => ({
@@ -25,13 +28,6 @@ export const Route = createFileRoute("/product/$slug")({
         content:
           "The OG Archive Oversized Hoodie in matte black. 500gsm heavyweight cotton. Preview the fit on your own body type with the AI Fit Preview.",
       },
-      { property: "og:title", content: "OG Archive Oversized Hoodie — OG CLOTHING" },
-      {
-        property: "og:description",
-        content:
-          "Heavyweight 500gsm cotton hoodie. AI-powered fit preview across body types and skin tones.",
-      },
-      { property: "og:type", content: "product" },
     ],
   }),
   component: ProductPage,
@@ -81,6 +77,10 @@ const colors = [
   { id: "moss", label: "Moss", hex: "#2f3a24" },
 ];
 
+const PRICE = 1299;
+const ORIGINAL_PRICE = 1999;
+const MEMBER_PRICE = 999;
+
 function fitRecommendation(gender: Gender, body: Body): string {
   if (body === "athletic") return "L — true to size for a boxy drop shoulder";
   if (body === "curvy") return "L — size up for a roomy oversized fit";
@@ -88,17 +88,20 @@ function fitRecommendation(gender: Gender, body: Body): string {
 }
 
 function ProductPage() {
-  // Defaults: masculine · athletic · medium skin tone
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { slug } = Route.useParams();
+
   const [gender, setGender] = useState<Gender>("male");
   const [body, setBody] = useState<Body>("athletic");
   const [skin, setSkin] = useState<Skin>("medium");
-
   const [size, setSize] = useState("L");
   const [color, setColor] = useState("matte");
   const [qty, setQty] = useState(1);
   const [switching, setSwitching] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const [wishlist, setWishlist] = useState(false);
 
-  // Keep body valid when gender flips (e.g. athletic → curvy, or curvy → athletic)
   useEffect(() => {
     const valid = BODY_OPTIONS[gender].map((b) => b.id);
     if (!valid.includes(body)) setBody(valid[valid.length - 1]);
@@ -106,27 +109,58 @@ function ProductPage() {
 
   const currentKey = useMemo(() => `${gender}-${body}-${skin}`, [gender, body, skin]);
 
-  // Trigger a brief "AI render" flash whenever the selection changes
   useEffect(() => {
     setSwitching(true);
     const t = setTimeout(() => setSwitching(false), 450);
     return () => clearTimeout(t);
   }, [currentKey]);
 
+  useEffect(() => {
+    if (slug) incrementProductViews(slug);
+  }, [slug]);
+
   const fit = fitRecommendation(gender, body);
+  const selectedColor = colors.find((c) => c.id === color)!;
+
+  function handleAddToCart() {
+    addToCart({
+      id: slug,
+      name: "OG Archive Oversized Hoodie",
+      price: PRICE,
+      color: color,
+      colorLabel: selectedColor.label,
+      size,
+      qty,
+      image: productHoodie,
+      slug,
+    });
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2500);
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MiniNav />
+    <div className="bg-background text-foreground">
+      {/* Breadcrumbs + Back */}
+      <div className="mx-auto max-w-[1600px] px-6 pb-4 pt-6 flex items-center gap-4">
+        <button
+          onClick={() => navigate({ to: "/shop" })}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition font-mono text-[10px] uppercase tracking-widest"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          Back
+        </button>
+        <span className="text-muted-foreground/40 font-mono text-[10px]">/</span>
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          Shop / Core / Hoodies / <span className="text-foreground">OG Archive</span>
+        </span>
+      </div>
 
-      <Breadcrumbs />
-
-      <section className="mx-auto grid max-w-[1600px] grid-cols-1 gap-10 px-6 pb-16 md:grid-cols-12 md:gap-14">
+      <section className="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-6 pb-16 md:grid-cols-12 lg:h-[calc(100vh-140px)]">
         {/* ─── LEFT · IMAGERY + FIT PREVIEW ─── */}
-        <div className="md:col-span-7">
+        <div className="md:col-span-7 lg:col-span-6 flex flex-col gap-4 overflow-y-auto overflow-x-hidden pb-8 no-scrollbar">
           <div className="relative">
             {/* Main visual */}
-            <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-[color:var(--color-bone)]">
+            <div className="relative aspect-[4/5] w-full max-h-[80vh] overflow-hidden rounded-lg bg-[color:var(--color-bone)] lg:max-h-none">
               {Object.entries(IMAGES).map(([key, src]) => (
                 <img
                   key={key}
@@ -168,73 +202,9 @@ function ProductPage() {
               )}
             </div>
 
-            {/* ─── PREVIEW ON YOU ─── */}
-            <div className="mt-6 rounded-xl border border-border p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="eyebrow flex items-center gap-2">
-                  <Sparkles className="h-3 w-3" /> See it on you
-                </div>
-                <button className="link-underline font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Save my profile
-                </button>
-              </div>
 
-              {/* Gender */}
-              <FieldRow label="Body">
-                <Segmented
-                  value={gender}
-                  onChange={(v) => setGender(v as Gender)}
-                  options={[
-                    { id: "male", label: "Masculine" },
-                    { id: "female", label: "Feminine" },
-                  ]}
-                />
-              </FieldRow>
-
-              {/* Body type */}
-              <FieldRow label="Build">
-                <Segmented
-                  value={body}
-                  onChange={(v) => setBody(v as Body)}
-                  options={BODY_OPTIONS[gender]}
-                />
-              </FieldRow>
-
-              {/* Skin tone */}
-              <FieldRow label="Skin tone">
-                <div className="flex gap-2">
-                  {SKIN_TONES.map((t) => {
-                    const active = t.id === skin;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setSkin(t.id)}
-                        aria-label={t.label}
-                        aria-pressed={active}
-                        className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs transition ${
-                          active
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-border hover:border-foreground/60"
-                        }`}
-                      >
-                        <span
-                          className="h-5 w-5 rounded-full border border-black/10"
-                          style={{ background: t.hex }}
-                        />
-                        {t.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </FieldRow>
-
-              <p className="mt-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Same garment · Rendered on your body · Instant · No refresh
-              </p>
-            </div>
-
-            {/* Flat product shot */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            {/* Flat product shot (Hidden on desktop to save space) */}
+            <div className="mt-4 hidden md:hidden grid-cols-2 gap-3 lg:hidden">
               <div className="aspect-square overflow-hidden rounded-md bg-[color:var(--color-bone)]">
                 <img src={hoodieFlat} alt="Flat lay of the hoodie" loading="lazy" className="h-full w-full object-cover" />
               </div>
@@ -250,30 +220,89 @@ function ProductPage() {
         </div>
 
         {/* ─── RIGHT · BUY BOX ─── */}
-        <aside className="md:col-span-5">
-          <div className="md:sticky md:top-24">
+        <aside className="md:col-span-5 lg:col-span-6 flex flex-col max-h-full overflow-y-auto pr-2 pb-4 pt-4">
+          <div>
             <div className="eyebrow">Core · 001 · Drop 018</div>
             <h1 className="mt-2 font-display text-4xl uppercase leading-none tracking-tight md:text-5xl">
               OG Archive<br />Oversized Hoodie.
             </h1>
-            <div className="mt-4 flex items-baseline gap-3">
-              <span className="font-mono text-2xl">$185</span>
-              <span className="font-mono text-xs text-muted-foreground line-through">$220</span>
+            <div className="mt-3 flex items-baseline gap-3 flex-wrap">
+              <span className="font-mono text-2xl">₹{PRICE.toLocaleString("en-IN")}</span>
+              <span className="font-mono text-xs text-muted-foreground line-through">₹{ORIGINAL_PRICE.toLocaleString("en-IN")}</span>
               <span className="rounded-full bg-[color:var(--color-neon)]/20 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-foreground">
-                Members $148
+                Members ₹{MEMBER_PRICE.toLocaleString("en-IN")}
               </span>
             </div>
 
-            <p className="mt-5 text-sm text-muted-foreground">
+            <p className="mt-3 text-sm text-muted-foreground">
               A brutalist take on the classic hood. Double-lined hood, boxy oversized silhouette,
               signature back embroidery. Made in a run of 500. Numbered, never restocked.
             </p>
 
+            {/* ─── PREVIEW ON YOU (Moved to right column) ─── */}
+            <div className="mt-6 rounded-xl border border-[color:var(--color-electric)]/30 bg-[color:var(--color-electric)]/5 p-4 z-10 shrink-0">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="eyebrow flex items-center gap-2 text-[color:var(--color-electric)]">
+                  <Sparkles className="h-3 w-3" /> Virtual Fit Preview
+                </div>
+              </div>
+
+              <FieldRow label="Body">
+                <Segmented
+                  value={gender}
+                  onChange={(v) => setGender(v as Gender)}
+                  options={[
+                    { id: "male", label: "Masculine" },
+                    { id: "female", label: "Feminine" },
+                  ]}
+                />
+              </FieldRow>
+
+              <FieldRow label="Build">
+                <Segmented
+                  value={body}
+                  onChange={(v) => setBody(v as Body)}
+                  options={BODY_OPTIONS[gender]}
+                />
+              </FieldRow>
+
+              <FieldRow label="Skin tone">
+                <div className="flex gap-2">
+                  {SKIN_TONES.map((t) => {
+                    const active = t.id === skin;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSkin(t.id)}
+                        aria-label={t.label}
+                        aria-pressed={active}
+                        className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs transition ${
+                          active
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border hover:border-foreground/60 bg-background"
+                        }`}
+                      >
+                        <span
+                          className="h-5 w-5 rounded-full border border-black/10"
+                          style={{ background: t.hex }}
+                        />
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </FieldRow>
+
+              <p className="mt-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                Settings instantly reflect on the main image.
+              </p>
+            </div>
+
             {/* Color */}
-            <div className="mt-8">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="mt-6">
+              <div className="mb-2 flex items-center justify-between">
                 <div className="eyebrow">Color</div>
-                <div className="text-xs">{colors.find((c) => c.id === color)?.label}</div>
+                <div className="text-xs">{selectedColor.label}</div>
               </div>
               <div className="flex gap-2">
                 {colors.map((c) => (
@@ -281,7 +310,7 @@ function ProductPage() {
                     key={c.id}
                     onClick={() => setColor(c.id)}
                     aria-label={c.label}
-                    className={`h-9 w-9 rounded-full border-2 transition ${
+                    className={`h-7 w-7 rounded-full border-2 transition ${
                       color === c.id ? "border-foreground scale-110" : "border-border hover:border-foreground/50"
                     }`}
                     style={{ background: c.hex }}
@@ -291,8 +320,8 @@ function ProductPage() {
             </div>
 
             {/* Size */}
-            <div className="mt-8">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
                 <div className="eyebrow">Size</div>
                 <button className="link-underline font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                   Size guide
@@ -307,7 +336,7 @@ function ProductPage() {
                       key={s}
                       disabled={out}
                       onClick={() => setSize(s)}
-                      className={`h-11 rounded-md border text-xs font-semibold transition ${
+                      className={`h-9 rounded-md border text-xs font-semibold transition ${
                         out
                           ? "cursor-not-allowed border-dashed border-border text-muted-foreground line-through"
                           : active
@@ -320,40 +349,59 @@ function ProductPage() {
                   );
                 })}
               </div>
-              <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-[color:var(--color-electric)]">
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-[color:var(--color-electric)]">
                 AI fit tip: recommend {fit}.
               </p>
             </div>
 
             {/* Qty + CTA */}
-            <div className="mt-8 flex items-stretch gap-3">
+            <div className="mt-5 flex items-stretch gap-3">
               <div className="flex items-center overflow-hidden rounded-full border border-border">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-3">
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2">
                   <Minus className="h-3 w-3" />
                 </button>
-                <span className="w-8 text-center text-sm font-semibold tabular-nums">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} className="px-3 py-3">
+                <span className="w-6 text-center text-sm font-semibold tabular-nums">{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2">
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
-              <button className="group flex flex-1 items-center justify-center gap-3 rounded-full bg-foreground py-3 text-sm font-semibold text-background transition hover:gap-4">
-                Add to bag — ${(185 * qty).toLocaleString()}
-                <ArrowUpRight className="h-4 w-4 transition group-hover:rotate-45" />
+              <button
+                onClick={handleAddToCart}
+                className={`group flex flex-1 items-center justify-center gap-3 rounded-full py-2 text-sm font-semibold transition ${
+                  addedToCart
+                    ? "bg-[color:var(--color-neon)]/20 text-foreground border border-[color:var(--color-neon)]"
+                    : "bg-foreground text-background hover:gap-4"
+                }`}
+              >
+                {addedToCart ? (
+                  "Added to bag ✓"
+                ) : (
+                  <>
+                    Add to bag — ₹{(PRICE * qty).toLocaleString("en-IN")}
+                    <ArrowUpRight className="h-4 w-4 transition group-hover:rotate-45" />
+                  </>
+                )}
               </button>
-              <button aria-label="Save" className="grid h-12 w-12 place-items-center rounded-full border border-border transition hover:border-foreground">
-                <Heart className="h-4 w-4" />
+              <button
+                aria-label="Wishlist"
+                onClick={() => setWishlist((w) => !w)}
+                className={`grid h-10 w-10 place-items-center rounded-full border transition ${
+                  wishlist ? "border-red-400 bg-red-50 text-red-500" : "border-border hover:border-foreground"
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${wishlist ? "fill-red-500 stroke-red-500" : ""}`} />
               </button>
             </div>
 
             {/* Perks */}
-            <ul className="mt-6 grid grid-cols-1 gap-2 text-xs">
-              <Perk icon={<Truck className="h-3.5 w-3.5" />}>Free express shipping over $150 · arrives Fri</Perk>
+            <ul className="mt-4 grid grid-cols-1 gap-1.5 text-xs">
+              <Perk icon={<Truck className="h-3.5 w-3.5" />}>Free express shipping over ₹1,500 · arrives Fri</Perk>
               <Perk icon={<RotateCw className="h-3.5 w-3.5" />}>30-day free returns · worldwide</Perk>
               <Perk icon={<ShieldCheck className="h-3.5 w-3.5" />}>Numbered piece · authenticity chip embedded</Perk>
             </ul>
 
-            {/* Detail accordion (static) */}
-            <div className="mt-10 divide-y divide-border border-y border-border">
+            {/* Detail accordion */}
+            <div className="mt-6 divide-y divide-border border-y border-border">
               <Detail title="Fabric & construction">
                 500gsm loop-back cotton · Double-lined hood · Reinforced kangaroo pocket · YKK metal tips.
               </Detail>
@@ -371,14 +419,11 @@ function ProductPage() {
   );
 }
 
-/* ─────── Small helpers ─────── */
-
+/* ─────── Helpers ─────── */
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-4">
-      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-        {label}
-      </div>
+      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
       <div>{children}</div>
     </div>
   );
@@ -403,41 +448,13 @@ function Segmented({
             onClick={() => onChange(o.id)}
             aria-pressed={active}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-              active
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:text-foreground"
+              active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {o.label}
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function MiniNav() {
-  return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background font-display text-sm">
-            OG
-          </span>
-          <span className="font-display text-sm tracking-widest">CLOTHING</span>
-        </Link>
-        <Link to="/" className="link-underline text-xs font-medium">
-          ← Back to shop
-        </Link>
-      </div>
-    </header>
-  );
-}
-
-function Breadcrumbs() {
-  return (
-    <div className="mx-auto max-w-[1600px] px-6 pb-6 pt-8 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-      <Link to="/" className="link-underline">Shop</Link> / Core / Hoodies / <span className="text-foreground">OG Archive</span>
     </div>
   );
 }
